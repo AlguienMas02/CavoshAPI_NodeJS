@@ -13,11 +13,29 @@ const setCliente = async (req, res) => {
         req.body.id = rows[0][0].insertID
         return ( req.body )
     }
+
     if ( typeof rows[0] != 'undefined' ) return ( { "error" : rows[0][0].error } )
     return ( { "update" : true } )
 }
 
+const getClienteCodigo = async (req, res) => {
+    let rows
+
+    try {
+         [ rows ] = await pool.query('call sp_getClienteCodigo(?)', [ req.body.correo ])
+    } catch (error) {
+        return ( { "error" : "El servidor no esta disponible" } )
+    }
+
+    if ( rows[0][0].codigo )
+        return ( { "codigo" : rows[0][0].codigo } )
+
+    if ( typeof rows[0] != 'undefined' ) 
+        return ( { "error" : rows[0][0].error } )
+}
+
 export const services = {
     getCliente, setCliente,
+    getClienteCodigo,
 
 }

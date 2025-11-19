@@ -1,3 +1,4 @@
+
 drop database if exists CavoshCafe;
 create database CavoshCafe;
 use CavoshCafe;
@@ -21,9 +22,9 @@ create table Cliente (
   Passwordd char(20) not null );
 
 create table CodigoVerificacion (
-  Correo char(30) unique,
+  idCliente int references Cliente(id),
   Codigo char(4) not null,
-  FechaCaducidad date not null );
+  FechaCaducidad time not null );
 
 create table Producto ( 
   id int primary key auto_increment,
@@ -89,17 +90,59 @@ create procedure sp_getCliente(in _correo char(30), in _passwordd char(20))
 create procedure sp_getCafes()
 	select * from Cafe order by id;
 
-create procedure sp_setCodigoVerificacion( in _correo char(30), in _codigo char(4), in fechaCaducidad date )
-	insert CodigoVerificacion values ( _correo, _codigo, _fechaCaducidad );
+
 
 create procedure sp_getCodigoVerificacion( in _correo char(30) )
 	select * from CodigoVerificacion where Correo = _Correo order by FechaCaducidad desc limit 1;
 
 delimiter //
 create procedure sp_setCliente(in _id int, in _nombres char(30), in _correo char(30), in _passwordd char(20))
-	if _id = 0 then
-		insert Cliente values (null, _nombres, _correo, _passwordd);
-    else update Cliente set Nombres = _nombres, Correo = _correo, Passwordd = _passwordd
-				where id = _id;
-	end if;
+	if ( _id = 0 ) then
+		begin
+            declare _count int;
+			select count(*) into _count from Cliente where Correo = _correo;
+			if ( _count = 0 ) then
+				insert Cliente values ( null, _nombres, _correo, _passwordd );
+                select last_insert_id() as insertID;
+			  else select "Cliente ya está registrado" as 'error';
+			end if;
+        end;
+	  else 
+		begin
+			update Cliente set Nombres = _nombres, Correo = _correo, Passwordd= _password where id = _id;
+			if ( row_count() = 0 ) then
+				select "Cliente no registrado" as 'error';
+            end if;
+		end;
+    end if;
 //
+
+create procedure sp_setCodigoVerificacion( in _correo char(30), in _codigo char(4), in FechaCaducidad date )
+	insert CodigoVerificacion values ( _correo, _codigo, FechaCaducidad );
+delimiter //
+create procedure sp_getClienteCodigo(in _correo char(30))
+	begin
+		declare _count int;
+		select count(*) into _count from Cliente where Correo = _correo;  
+		if ( _count = 0 ) then
+			Select "Este correo no tiene un usuario registrado" as 'error';
+		else 
+            begin 
+                declare _fechaAdd time;
+                declare _id int;
+                declare _codigo int;
+		
+                set _fechaAdd = date_add(now(), interval 15 minute);
+                set _codigo = floor(rand()* (9999 - 1000 +1)+1000);
+                
+                set _id = (select id from Cliente where Correo = _correo);
+				insert CodigoVerificacion values (_id, _codigo, _fechaAdd);
+                select _codigo as Codigo;
+                end;
+		end if;
+    end;
+//
+
+
+-- call sp_setCliente("0", "Omar", "oaemdl2@gmail.com", 123)
+-- call sp_getClienteCodigo("oaemdl@gmail.com")
