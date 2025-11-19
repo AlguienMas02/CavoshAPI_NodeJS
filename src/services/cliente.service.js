@@ -27,11 +27,16 @@ const getClienteCodigo = async (req, res) => {
         return ( { "error" : "El servidor no esta disponible" } )
     }
 
-    if ( rows[0][0].codigo )
-        return ( { "codigo" : rows[0][0].codigo } )
+    if ( rows[0][0].id )
+        return ( { "id": rows[0][0], id, "codigo" : rows[0][0].codigo } )
 
     if ( typeof rows[0] != 'undefined' ) 
         return ( { "error" : rows[0][0].error } )
+}
+
+const getClienteCodigoValidar = async (req, res) => {
+    const rows = await pool.query('call sp_getCliente(?,?)', [ ...Object.values( req.body ) ])
+    return ( rows[0] )
 }
 
 export const services = {

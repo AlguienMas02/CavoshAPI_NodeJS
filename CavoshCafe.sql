@@ -1,4 +1,3 @@
-
 drop database if exists CavoshCafe;
 create database CavoshCafe;
 use CavoshCafe;
@@ -92,11 +91,8 @@ create procedure sp_getCafes()
 
 
 
-create procedure sp_getCodigoVerificacion( in _correo char(30) )
-	select * from CodigoVerificacion where Correo = _Correo order by FechaCaducidad desc limit 1;
-
 delimiter //
-create procedure sp_setCliente(in _id int, in _nombres char(30), in _correo char(30), in _passwordd char(20))
+create procedure sp_setCliente(in _id int, in _nombres char(30), in _correo char(30), in _passwordd char(20) )
 	if ( _id = 0 ) then
 		begin
             declare _count int;
@@ -104,45 +100,67 @@ create procedure sp_setCliente(in _id int, in _nombres char(30), in _correo char
 			if ( _count = 0 ) then
 				insert Cliente values ( null, _nombres, _correo, _passwordd );
                 select last_insert_id() as insertID;
-			  else select "Cliente ya está registrado" as 'error';
+			  else select "Correo ya está registrado" as 'error';
 			end if;
         end;
 	  else 
 		begin
-			update Cliente set Nombres = _nombres, Correo = _correo, Passwordd= _password where id = _id;
+			update Cliente set Nombres = _nombres, Correo = _correo, Passwordd = _passwordd where id = _id;
 			if ( row_count() = 0 ) then
-				select "Cliente no registrado" as 'error';
+				select "Cliente no esta registrado" as 'error';
             end if;
 		end;
     end if;
 //
 
-create procedure sp_setCodigoVerificacion( in _correo char(30), in _codigo char(4), in FechaCaducidad date )
-	insert CodigoVerificacion values ( _correo, _codigo, FechaCaducidad );
+
+
 delimiter //
 create procedure sp_getClienteCodigo(in _correo char(30))
 	begin
 		declare _count int;
-		select count(*) into _count from Cliente where Correo = _correo;  
+		select count(*) into _count from Cliente where Correo = _correo;
 		if ( _count = 0 ) then
-			Select "Este correo no tiene un usuario registrado" as 'error';
-		else 
-            begin 
-                declare _fechaAdd time;
+			select "Correo no está registrado" as 'error';
+		  else 
+			begin
                 declare _id int;
                 declare _codigo int;
-		
-                set _fechaAdd = date_add(now(), interval 15 minute);
-                set _codigo = floor(rand()* (9999 - 1000 +1)+1000);
+                declare _fechaAdd time;
+                
+                set _fechaAdd = date_add( now(), interval 5 minute );
+				set _codigo = floor( rand() * (9999 - 1000 + 1) + 1000 );
                 
                 set _id = (select id from Cliente where Correo = _correo);
-				insert CodigoVerificacion values (_id, _codigo, _fechaAdd);
-                select _codigo as Codigo;
-                end;
+				insert CodigoVerificacion values ( _id, _codigo, _fechaAdd );
+				select _codigo as codigo;
+            end;
 		end if;
-    end;
+	end;
 //
 
-
--- call sp_setCliente("0", "Omar", "oaemdl2@gmail.com", 123)
+-- call sp_setCliente("0","omar","oaemdl@gmail.com","1234")
+-- call sp_getCliente("oaemdl@gmail.com","1234")
 -- call sp_getClienteCodigo("oaemdl@gmail.com")
+
+-- select * from CodigoVerificacion
+
+
+delimiter //
+create procedure sp_getClienteCodigoValidar(in _id int, in _codigo int)
+	begin
+        declare _fechaCaducidad time;
+        declare _minutos time;
+
+        
+		select FechaCaducidad into _fechaCaducidad 
+			from CodigoVerificacion 
+			where id = _id and Codigo = _codigo;
+            
+		set _minutos = timestampdiff(minute, _fechaCaducidad, time());
+		select _minutos;
+ 
+	end;
+//
+
+-- call sp_getClienteCodigoValidar(1, 7156)
